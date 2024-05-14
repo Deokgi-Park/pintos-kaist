@@ -28,6 +28,9 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+/* PDG. */
+static struct list sleep_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -63,6 +66,9 @@ static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
 
+/* PDG 글로벌 쓰레드 웨이크업 틱스  */
+int64_t global_ticks = INT64_MAX;
+
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
 
@@ -73,11 +79,25 @@ static tid_t allocate_tid (void);
  * somewhere in the middle, this locates the curent thread. */
 #define running_thread() ((struct thread *) (pg_round_down (rrsp ())))
 
-
 // Global descriptor table for the thread_start.
 // Because the gdt will be setup after the thread_init, we should
 // setup temporal gdt first.
 static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
+
+bool compare_wake_tick(const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED){
+	const struct thread *a = list_entry (a_, struct thread, elem);
+	const struct thread *b = list_entry (b_, struct thread, elem);
+
+	return a->wakeup_tick < b->wakeup_tick;
+}
+
+bool compare_priority(const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED){
+	const struct thread *a = list_entry (a_, struct thread, elem);
+	const struct thread *b = list_entry (b_, struct thread, elem);
+
+	return a->priority < b->priority;
+}
+
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -108,6 +128,8 @@ thread_init (void) {
 	/* Init the globla thread context */
 	lock_init (&tid_lock);
 	list_init (&ready_list);
+	/* PDG */
+	list_init (&sleep_list);
 	list_init (&destruction_req);
 
 	/* Set up a thread structure for the running thread. */
@@ -208,6 +230,52 @@ thread_create (const char *name, int priority,
 	thread_unblock (t);
 
 	return tid;
+}
+
+/* PDG 쓰레드를 정지 시키고 sleep 리스트에 추가하는 함수 생성 */
+void thread_sleep(int64_t ticks){
+	struct thread *curr = thread_current();
+	
+	struct thread *sleep_head;
+	
+	enum intr_level old_level;
+	
+	old_level = intr_disable ();
+	
+	if (curr != idle_thread){
+		curr->wakeup_tick = ticks;
+		list_insert_ordered(&sleep_list, &curr->elem, compare_wake_tick, NULL);
+		
+		sleep_head = list_entry(list_begin(&sleep_list), struct thread, elem);
+		
+		// printf("thread_sleep insert ticks : %lld\n" , sleep_head->wakeup_tick);
+		// printf("thread_sleep head : %lld\n" , sleep_head->wakeup_tick);
+		// printf("thread_sleep ticks : %lld\n" , ticks);
+		
+	}
+	global_ticks = sleep_head->wakeup_tick;
+	thread_block();
+	intr_set_level (old_level);
+}
+
+/* PDG 쓰레드를 정지 풀고시키고 ready 리스트에 추가하는 함수 생성 */
+void thread_wakeup(){
+	struct thread *wakeup_thread = list_entry(list_pop_front(&sleep_list.head), struct thread, elem);
+	
+	enum intr_level old_level;
+	old_level = intr_disable ();
+
+	thread_unblock(wakeup_thread);
+	
+	//printf("thread_wakeup before : %lld\n" , global_ticks);
+	global_ticks = list_entry(list_begin(&sleep_list), struct thread, elem)->wakeup_tick;
+	//printf("thread_wakeup after : %lld\n" , global_ticks);
+
+	intr_set_level (old_level);
+}
+
+int64_t get_globalticks(){
+	return global_ticks;
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
