@@ -111,7 +111,7 @@ sema_up (struct semaphore *sema) {
 		thread_unblock (list_entry (list_pop_front (&sema->waiters), struct thread, elem));
 	}
 	sema->value++;
-	thread_yield();
+	priority_preemption();
 	intr_set_level (old_level);
 }
 
@@ -295,6 +295,19 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 	}
 }
 
+
+// 여러 세마포어들의 리스트 중 가장 우선순위가 높은 하나의 세마포 깨우기 위한 힘수
+bool sema_compare_priority(const struct list_elem *higher, const struct list_elem *lower, void *aux UNUSED) {
+	struct semaphore_elem *higher_sema = list_entry(higher, struct semaphore_elem, elem);
+	struct semaphore_elem *lower_sema = list_entry(lower, struct semaphore_elem, elem);
+
+	struct list *waiter_higher_sema = &(higher_sema->semaphore.waiters);
+	struct list *watier_lower_sema = &(lower_sema->semaphore.waiters);
+
+	return list_entry(list_begin(waiter_higher_sema), struct thread, elem)->priority 
+			> list_entry(list_begin(watier_lower_sema), struct thread, elem)->priority;
+}
+
 /* COND(LOCK으로 보호됨)에서 대기 중인 모든 스레드를 깨웁니다.
    이 함수를 호출하기 전에 LOCK이 소유되어야 합니다.
 
@@ -307,16 +320,4 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 
 	while (!list_empty (&cond->waiters))
 		cond_signal (cond, lock);
-}
-
-// 여러 세마포어들의 리스트 중 가장 우선순위가 높은 하나의 세마포 깨우기 위한 힘수
-bool sema_compare_priority(const struct list_elem *higher, const struct list_elem *lower, void *aux UNUSED) {
-	struct semaphore_elem *higher_sema = list_entry(higher, struct semaphore_elem, elem);
-	struct semaphore_elem *lower_sema = list_entry(lower, struct semaphore_elem, elem);
-
-	struct list *waiter_higher_sema = &(higher_sema->semaphore.waiters);
-	struct list *watier_lower_sema = &(lower_sema->semaphore.waiters);
-
-	return list_entry(list_begin(waiter_higher_sema), struct thread, elem)->priority 
-			> list_entry(list_begin(watier_lower_sema), struct thread, elem)->priority;
 }

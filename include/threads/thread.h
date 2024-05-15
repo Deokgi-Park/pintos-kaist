@@ -91,11 +91,14 @@ struct thread {
 	enum thread_status status;          /* Thread state. */
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
-	/* PDG 원본 우선순위 설정*/
-	int org_priority;
+
 	
 	/* PDG wakeup time set*/
 	int64_t wakeup_tick;
+	/* PDG 원본 우선순위 설정*/
+	int org_priority;
+	struct lock* wait_on_lock;			
+	struct thread* donation;			 
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
@@ -157,4 +160,5 @@ int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
 
+void priority_preemption(void);
 #endif /* threads/thread.h */

@@ -65,6 +65,13 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+void priority_preemption() {
+	int cur_priority = thread_get_priority();		// 현재 실행 중인 thread의 priority보다
+	if(!list_empty(&ready_list) && cur_priority <	
+	list_entry(list_front(&ready_list), struct thread, elem)->priority) {						// ready list의 맨 앞 thread의 priority가 높다면
+		thread_yield();								// 현재 실행 중인 thread를 yield하게 함
+	}
+}
 
 /* PDG 글로벌 쓰레드 웨이크업 틱스  */
 int64_t global_ticks = INT64_MAX;
@@ -236,11 +243,8 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 
-	/*PDG 현재 쓰래드 우선순위가 낮으면 양보 START*/
-	if(thread_current()->priority < t->priority){
-		thread_yield();
-	}
-	/*PDG END*/
+	/* Compare priority of ready list's front with currently running thread */
+	priority_preemption();
 
 	return tid;
 }
@@ -407,9 +411,8 @@ thread_set_priority (int new_priority) {
 	//PDG 우선순위 변경시 리스트 재정렬 start
 	enum intr_level old_level;
 	old_level = intr_disable ();
-	//다음을 할 필요가 없을것 같음...
-	//list_sort(&ready_list, compare_priority, NULL);
-	thread_yield();
+	list_sort(&ready_list, compare_priority, NULL);
+	priority_preemption();
 	intr_set_level (old_level);
 	//PDG 우선순위 변경시 리스트 재정렬 end
 	
