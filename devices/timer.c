@@ -94,10 +94,6 @@ timer_sleep (int64_t ticks) {
 	int64_t wakeup_time;
 	
 	ASSERT (intr_get_level () == INTR_ON);
-	/* PDG 주석처리 start  */
-	// while (timer_elapsed (start) < ticks)
-	// 	thread_yield ();
-	/* PDG 주석처리 end */
 	
 	/* PDG insert start*/
 	//문맥교환, 현재 쓰레드와 다음 쓰레드를 교체 
@@ -141,7 +137,7 @@ timer_interrupt (struct intr_frame *args UNUSED) {
 	/*PDG start*/
 	// printf("timer_interrupt global_ticks : %lld\n", get_globalticks());
 	// printf("timer_interrupt ticks : %lld\n", ticks);
-	if (get_globalticks() <= ticks){
+	while(get_globalticks() <= ticks){
 		thread_wakeup();
 	}
 	/*PDG end*/
