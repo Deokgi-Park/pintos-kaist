@@ -1,9 +1,16 @@
 FAIL
 Kernel panic in run: PANIC at ../../tests/threads/tests.c:60 in run_test(): no test named "mlfqs-fair-20"
+<<<<<<< HEAD
 Call stack: 0x8004213639 0x8004216ae7 0x8004206636 0x8004206783 0x8004206120
 Translation of call stack:
 0x0000008004213639: debug_panic (lib/kernel/debug.c:32)
 0x0000008004216ae7: run_test (tests/threads/tests.c:61)
+=======
+Call stack: 0x8004213556 0x8004216a04 0x8004206636 0x8004206783 0x8004206120
+Translation of call stack:
+0x0000008004213556: debug_panic (lib/kernel/debug.c:32)
+0x0000008004216a04: run_test (tests/threads/tests.c:61)
+>>>>>>> 6bbde9157adb13c893e61a70721d6a8f145d4112
 0x0000008004206636: run_task (threads/init.c:252)
 0x0000008004206783: run_actions (threads/init.c:297)
 0x0000008004206120: main (threads/init.c:125)

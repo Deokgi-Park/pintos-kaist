@@ -4,7 +4,11 @@ Kernel command line: -q run alarm-multiple
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
+<<<<<<< HEAD
 Calibrating timer...  301,056,000 loops/s.
+=======
+Calibrating timer...  235,520,000 loops/s.
+>>>>>>> 6bbde9157adb13c893e61a70721d6a8f145d4112
 Boot complete.
 Executing 'alarm-multiple':
 (alarm-multiple) begin
