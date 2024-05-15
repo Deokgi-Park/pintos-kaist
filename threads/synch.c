@@ -27,6 +27,9 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+
+static bool sema_compare_priority(const struct list_elem *higher, const struct list_elem *lower, void *aux UNUSED);
+
 /* 세마포어 SEMA를 VALUE로 초기화합니다. 세마포어는
    두 가지 원자적 연산과 함께 사용하는 비음수 정수입니다:
 
@@ -100,14 +103,15 @@ sema_try_down (struct semaphore *sema) {
 void
 sema_up (struct semaphore *sema) {
 	enum intr_level old_level;
-
 	ASSERT (sema != NULL);
 
 	old_level = intr_disable ();
-	if (!list_empty (&sema->waiters))
-		thread_unblock (list_entry (list_pop_front (&sema->waiters),
-					struct thread, elem));
+
+	if (!list_empty (&sema->waiters)){
+		thread_unblock (list_entry (list_pop_front (&sema->waiters), struct thread, elem));
+	}
 	sema->value++;
+	thread_yield();
 	intr_set_level (old_level);
 }
 
@@ -176,6 +180,9 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!lock_held_by_current_thread (lock));
 	sema_down (&lock->semaphore);
 	lock->holder = thread_current ();
+	
+
+	
 	//PDG 현재 락의 대기열의 처음의 우선순위를 설정
 	//thread_current()->priority = list_entry(list_begin(&lock->semaphore.waiters), struct thread, elem)->priority;
 }
@@ -262,7 +269,7 @@ cond_wait (struct condition *cond, struct lock *lock) {
 	sema_init (&waiter.semaphore, 0);
 	//list_push_back (&cond->waiters, &waiter.elem);
 	// PDG
-	list_insert_ordered (&cond->waiters, &waiter.elem, compare_priority, NULL);	
+	list_insert_ordered (&cond->waiters, &waiter.elem, sema_compare_priority, NULL);	
 	lock_release (lock);
 	sema_down (&waiter.semaphore);
 	lock_acquire (lock);
@@ -281,9 +288,11 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 	ASSERT (!intr_context ());
 	ASSERT (lock_held_by_current_thread (lock));
 
-	if (!list_empty (&cond->waiters))
+	if (!list_empty (&cond->waiters)){
+		list_sort(&cond->waiters, sema_compare_priority, 0);
 		sema_up (&list_entry (list_pop_front (&cond->waiters),
 					struct semaphore_elem, elem)->semaphore);
+	}
 }
 
 /* COND(LOCK으로 보호됨)에서 대기 중인 모든 스레드를 깨웁니다.
@@ -298,4 +307,16 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 
 	while (!list_empty (&cond->waiters))
 		cond_signal (cond, lock);
+}
+
+// 여러 세마포어들의 리스트 중 가장 우선순위가 높은 하나의 세마포 깨우기 위한 힘수
+bool sema_compare_priority(const struct list_elem *higher, const struct list_elem *lower, void *aux UNUSED) {
+	struct semaphore_elem *higher_sema = list_entry(higher, struct semaphore_elem, elem);
+	struct semaphore_elem *lower_sema = list_entry(lower, struct semaphore_elem, elem);
+
+	struct list *waiter_higher_sema = &(higher_sema->semaphore.waiters);
+	struct list *watier_lower_sema = &(lower_sema->semaphore.waiters);
+
+	return list_entry(list_begin(waiter_higher_sema), struct thread, elem)->priority 
+			> list_entry(list_begin(watier_lower_sema), struct thread, elem)->priority;
 }

@@ -91,7 +91,6 @@ void
 timer_sleep (int64_t ticks) {
 	//ticks 지역 틱
 	int64_t start = timer_ticks ();
-	int64_t wakeup_time;
 	
 	ASSERT (intr_get_level () == INTR_ON);
 	

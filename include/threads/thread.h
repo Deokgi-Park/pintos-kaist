@@ -91,10 +91,11 @@ struct thread {
 	enum thread_status status;          /* Thread state. */
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
+	/* PDG 원본 우선순위 설정*/
+	int org_priority;
+	
 	/* PDG wakeup time set*/
 	int64_t wakeup_tick;
-	/* PDG wakeup time set*/
-	//int64_t org_priority;
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */

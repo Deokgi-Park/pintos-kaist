@@ -28,7 +28,7 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
-/* PDG. */
+/* PDG 수면리스트 */
 static struct list sleep_list;
 
 /* Idle thread. */
@@ -95,6 +95,13 @@ bool compare_priority(const struct list_elem *curr, const struct list_elem *new,
 	const struct thread *a = list_entry (curr, struct thread, elem);
 	const struct thread *b = list_entry (new, struct thread, elem);
 
+	return a->priority > b->priority;
+}
+
+bool sema_compare_priority(const struct list_elem *curr, const struct list_elem *new, void *aux UNUSED){
+	const struct thread *a = list_entry (curr, struct thread, elem);
+	const struct thread *b = list_entry (new, struct thread, elem);
+	printf("-------------------%d \n", b->priority);
 	return a->priority > b->priority;
 }
 
@@ -502,7 +509,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	strlcpy (t->name, name, sizeof t->name);
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
-	//t->org_priority = priority;
+	t->org_priority = priority;
 	t->magic = THREAD_MAGIC;
 }
 
