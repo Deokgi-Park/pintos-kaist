@@ -28,7 +28,7 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
-/* PDG. */
+/* PDG 수면리스트 */
 static struct list sleep_list;
 
 /* Idle thread. */
@@ -65,6 +65,13 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+void priority_preemption() {
+	int cur_priority = thread_get_priority();		// 현재 실행 중인 thread의 priority보다
+	if(!list_empty(&ready_list) && cur_priority <	
+	list_entry(list_front(&ready_list), struct thread, elem)->priority) {						// ready list의 맨 앞 thread의 priority가 높다면
+		thread_yield();								// 현재 실행 중인 thread를 yield하게 함
+	}
+}
 
 /* PDG 글로벌 쓰레드 웨이크업 틱스  */
 int64_t global_ticks = INT64_MAX;
@@ -91,11 +98,18 @@ bool compare_wake_tick(const struct list_elem *a_, const struct list_elem *b_, v
 	return a->wakeup_tick < b->wakeup_tick;
 }
 
-bool compare_priority(const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED){
-	const struct thread *a = list_entry (a_, struct thread, elem);
-	const struct thread *b = list_entry (b_, struct thread, elem);
+bool compare_priority(const struct list_elem *curr, const struct list_elem *new, void *aux UNUSED){
+	const struct thread *a = list_entry (curr, struct thread, elem);
+	const struct thread *b = list_entry (new, struct thread, elem);
 
-	return a->priority < b->priority;
+	return a->priority > b->priority;
+}
+
+bool sema_compare_priority(const struct list_elem *curr, const struct list_elem *new, void *aux UNUSED){
+	const struct thread *a = list_entry (curr, struct thread, elem);
+	const struct thread *b = list_entry (new, struct thread, elem);
+	printf("-------------------%d \n", b->priority);
+	return a->priority > b->priority;
 }
 
 
@@ -229,6 +243,9 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 
+	/* Compare priority of ready list's front with currently running thread */
+	priority_preemption();
+
 	return tid;
 }
 
@@ -260,6 +277,7 @@ void thread_sleep(int64_t ticks){
 
 /* PDG 쓰레드를 정지 풀고시키고 ready 리스트에 추가하는 함수 생성 */
 void thread_wakeup(){
+
 	struct thread *wakeup_thread = list_entry(list_pop_front(&sleep_list.head), struct thread, elem);
 	
 	enum intr_level old_level;
@@ -308,7 +326,12 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	
+	//PDG 주석 처리
+	//list_push_back (&ready_list, &t->elem);
+	//PDG ADD 우선 순위 정렬
+	list_insert_ordered(&ready_list, &t-> elem, compare_priority, NULL); 
+	
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -370,8 +393,13 @@ thread_yield (void) {
 	ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
-	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+	if (curr != idle_thread){
+		//PDG 주석처리
+		//list_push_back (&ready_list, &curr->elem);
+
+		//PDG 우선순위로 변경
+		list_insert_ordered(&ready_list, &curr->elem, compare_priority, NULL);
+	}
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
@@ -380,6 +408,14 @@ thread_yield (void) {
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
+	//PDG 우선순위 변경시 리스트 재정렬 start
+	enum intr_level old_level;
+	old_level = intr_disable ();
+	list_sort(&ready_list, compare_priority, NULL);
+	priority_preemption();
+	intr_set_level (old_level);
+	//PDG 우선순위 변경시 리스트 재정렬 end
+	
 }
 
 /* Returns the current thread's priority. */
@@ -476,6 +512,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	strlcpy (t->name, name, sizeof t->name);
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
+	t->org_priority = priority;
 	t->magic = THREAD_MAGIC;
 }
 
