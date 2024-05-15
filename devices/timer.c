@@ -28,7 +28,6 @@ static intr_handler_func timer_interrupt;
 static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
-
 /* Sets up the 8254 Programmable Interval Timer (PIT) to
    interrupt PIT_FREQ times per second, and registers the
    corresponding interrupt. */
@@ -90,11 +89,19 @@ timer_elapsed (int64_t then) {
 /* Suspends execution for approximately TICKS timer ticks. */
 void
 timer_sleep (int64_t ticks) {
+	//ticks 지역 틱
 	int64_t start = timer_ticks ();
-
+	
 	ASSERT (intr_get_level () == INTR_ON);
-	while (timer_elapsed (start) < ticks)
-		thread_yield ();
+	
+	/* PDG insert start*/
+	//문맥교환, 현재 쓰레드와 다음 쓰레드를 교체 
+	//대기 쓰레드(ready_list) 없으면 idle 쓰레드
+	//ticks 값이 음수 값이 들어왔거나, 현재 틱스보다 작은 경우 미동작
+	if(timer_elapsed (start) < ticks){
+		thread_sleep(start+ticks);
+	}
+	/* PDG insert end*/
 }
 
 /* Suspends execution for approximately MS milliseconds. */
@@ -120,12 +127,19 @@ void
 timer_print_stats (void) {
 	printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
-
+
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
 	thread_tick ();
+	/*PDG start*/
+	// printf("timer_interrupt global_ticks : %lld\n", get_globalticks());
+	// printf("timer_interrupt ticks : %lld\n", ticks);
+	while(get_globalticks() <= ticks){
+		thread_wakeup();
+	}
+	/*PDG end*/
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
