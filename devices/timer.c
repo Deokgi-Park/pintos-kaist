@@ -134,8 +134,6 @@ timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
 	thread_tick ();
 	/*PDG start*/
-	// printf("timer_interrupt global_ticks : %lld\n", get_globalticks());
-	// printf("timer_interrupt ticks : %lld\n", ticks);
 	while(get_globalticks() <= ticks){
 		thread_wakeup();
 	}

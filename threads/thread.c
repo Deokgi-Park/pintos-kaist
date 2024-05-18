@@ -13,6 +13,7 @@
 #include "intrinsic.h"
 #ifdef USERPROG
 #include "userprog/process.h"
+#include "fixed_point.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -30,6 +31,9 @@ static struct list ready_list;
 
 /* PDG 수면리스트 */
 static struct list sleep_list;
+
+/* PDG 모든 스레드 리스트 */
+//static struct list all_list;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -65,16 +69,21 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+
+/* PDG 우선순위 비교하여 문맥교환 */
 void priority_preemption() {
-	int cur_priority = thread_get_priority();		// 현재 실행 중인 thread의 priority보다
-	if(!list_empty(&ready_list) && cur_priority <	
-	list_entry(list_front(&ready_list), struct thread, elem)->priority) {						// ready list의 맨 앞 thread의 priority가 높다면
-		thread_yield();								// 현재 실행 중인 thread를 yield하게 함
-	}
+	if (list_empty(&ready_list))
+		return;
+	struct thread *t = list_entry(list_front(&ready_list), struct thread, elem);
+	if (thread_current()->priority < t->priority)
+		thread_yield();
 }
 
 /* PDG 글로벌 쓰레드 웨이크업 틱스  */
 int64_t global_ticks = INT64_MAX;
+
+/* PDG 글로벌 쓰레드 웨이크업 틱스  */
+int load_avg = 0;
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -104,14 +113,12 @@ bool compare_priority(const struct list_elem *curr, const struct list_elem *new,
 
 	return a->priority > b->priority;
 }
+bool compare_donation_priority(const struct list_elem *curr, const struct list_elem *new, void *aux UNUSED){
+	const struct thread *a = list_entry (curr, struct thread, d_elem);
+	const struct thread *b = list_entry (new, struct thread, d_elem);
 
-bool sema_compare_priority(const struct list_elem *curr, const struct list_elem *new, void *aux UNUSED){
-	const struct thread *a = list_entry (curr, struct thread, elem);
-	const struct thread *b = list_entry (new, struct thread, elem);
-	printf("-------------------%d \n", b->priority);
 	return a->priority > b->priority;
 }
-
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -144,6 +151,8 @@ thread_init (void) {
 	list_init (&ready_list);
 	/* PDG */
 	list_init (&sleep_list);
+	/* PDG MLFQ 전체리스트 초기화*/
+	//list_init (&all_list);
 	list_init (&destruction_req);
 
 	/* Set up a thread structure for the running thread. */
@@ -228,7 +237,6 @@ thread_create (const char *name, int priority,
 	/* Initialize thread. */
 	init_thread (t, name, priority);
 	tid = t->tid = allocate_tid ();
-
 	/* Call the kernel_thread if it scheduled.
 	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
 	t->tf.rip = (uintptr_t) kernel_thread;
@@ -239,10 +247,13 @@ thread_create (const char *name, int priority,
 	t->tf.ss = SEL_KDSEG;
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
+	
+	/* PDG MLFQ 전체 관리를 위한 리스트 추가*/
+	//list_push_back(&all_list, t);
 
 	/* Add to run queue. */
 	thread_unblock (t);
-
+	
 	/* Compare priority of ready list's front with currently running thread */
 	priority_preemption();
 
@@ -264,11 +275,6 @@ void thread_sleep(int64_t ticks){
 		list_insert_ordered(&sleep_list, &curr->elem, compare_wake_tick, NULL);
 		
 		sleep_head = list_entry(list_begin(&sleep_list), struct thread, elem);
-		
-		// printf("thread_sleep insert ticks : %lld\n" , sleep_head->wakeup_tick);
-		// printf("thread_sleep head : %lld\n" , sleep_head->wakeup_tick);
-		// printf("thread_sleep ticks : %lld\n" , ticks);
-		
 	}
 	global_ticks = sleep_head->wakeup_tick;
 	thread_block();
@@ -278,16 +284,13 @@ void thread_sleep(int64_t ticks){
 /* PDG 쓰레드를 정지 풀고시키고 ready 리스트에 추가하는 함수 생성 */
 void thread_wakeup(){
 
-	struct thread *wakeup_thread = list_entry(list_pop_front(&sleep_list.head), struct thread, elem);
+	struct thread *wakeup_thread = list_entry(list_pop_front(&sleep_list), struct thread, elem);
 	
 	enum intr_level old_level;
 	old_level = intr_disable ();
 
 	thread_unblock(wakeup_thread);
-	
-	//printf("thread_wakeup before : %lld\n" , global_ticks);
 	global_ticks = list_entry(list_begin(&sleep_list), struct thread, elem)->wakeup_tick;
-	//printf("thread_wakeup after : %lld\n" , global_ticks);
 
 	intr_set_level (old_level);
 }
@@ -331,7 +334,6 @@ thread_unblock (struct thread *t) {
 	//list_push_back (&ready_list, &t->elem);
 	//PDG ADD 우선 순위 정렬
 	list_insert_ordered(&ready_list, &t-> elem, compare_priority, NULL); 
-	
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -407,15 +409,15 @@ thread_yield (void) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
-	thread_current ()->priority = new_priority;
-	//PDG 우선순위 변경시 리스트 재정렬 start
-	enum intr_level old_level;
-	old_level = intr_disable ();
-	list_sort(&ready_list, compare_priority, NULL);
-	priority_preemption();
-	intr_set_level (old_level);
+	// if(thread_mlfqs){
+		if (thread_current()->org_priority == thread_current()->priority)
+			thread_current()->priority = new_priority;
+		thread_current()->org_priority = new_priority;
+		priority_preemption();
+	// }else{
+	// 	thread_current()->priority = new_priority;
+	// }
 	//PDG 우선순위 변경시 리스트 재정렬 end
-	
 }
 
 /* Returns the current thread's priority. */
@@ -426,29 +428,35 @@ thread_get_priority (void) {
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) {
+thread_set_nice (int new_nice) {
 	/* TODO: Your implementation goes here */
+	if(new_nice > 20)
+		thread_current()->nice = 20;
+	if(new_nice < -20)
+		thread_current()->nice = -20;
+	else
+		thread_current()->nice = new_nice;
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) {
 	/* TODO: Your implementation goes here */
-	return 0;
+	return thread_current()->nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) {
 	/* TODO: Your implementation goes here */
-	return 0;
+	return load_avg*100;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) {
 	/* TODO: Your implementation goes here */
-	return 0;
+	return thread_current()->recent_cpu * 100;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -513,6 +521,11 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->org_priority = priority;
+	list_init(&t->donation);
+	/* PDG MLFQ 친절함 초기화 */
+	t->nice = 0;
+	/* PDG MLFQ CPU 사용량 초기화 */
+	t->recent_cpu = 0;
 	t->magic = THREAD_MAGIC;
 }
 
