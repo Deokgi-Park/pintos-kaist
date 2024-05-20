@@ -9,10 +9,21 @@ pintos --gdb -- -q run alarm-multiple
 gdb kernel.o
 layout src
 target remote localhost:1234
-break thread_wakeup
-break thread_sleep
-break timer_interrupt
+break lock_acquire
+break list_remove
+break lock_release
+b test_priority_donate_one
+b thread_create
 c
+
+
+
+gdb kernel.o
+layout src
+target remote localhost:1234
+break test_mlfqs_load_1
+
+
 
 //브레이크 거는 법
 break 함수

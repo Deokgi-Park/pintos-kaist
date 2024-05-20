@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+PASS
+=======
+<<<<<<< HEAD
+PASS
+=======
 FAIL
 Test output failed to match any acceptable form.
 
@@ -73,3 +79,5 @@ Differences in `diff -u' format:
 - (priority-condvar) Signaling...
 - (priority-condvar) Thread priority 21 woke up.
   (priority-condvar) end
+>>>>>>> 6bbde9157adb13c893e61a70721d6a8f145d4112
+>>>>>>> b449edebe54eb811ffbac3732c656191733863ad

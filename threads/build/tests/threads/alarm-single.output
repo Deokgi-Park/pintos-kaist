@@ -4,7 +4,15 @@ Kernel command line: -q run alarm-single
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
+<<<<<<< HEAD
+Calibrating timer...  219,955,200 loops/s.
+=======
+<<<<<<< HEAD
+Calibrating timer...  13,094,400 loops/s.
+=======
 Calibrating timer...  209,510,400 loops/s.
+>>>>>>> 6bbde9157adb13c893e61a70721d6a8f145d4112
+>>>>>>> b449edebe54eb811ffbac3732c656191733863ad
 Boot complete.
 Executing 'alarm-single':
 (alarm-single) begin
@@ -20,8 +28,19 @@ Executing 'alarm-single':
 (alarm-single) thread 4: duration=50, iteration=1, product=50
 (alarm-single) end
 Execution of 'alarm-single' complete.
+<<<<<<< HEAD
+Timer: 279 ticks
+Thread: 250 idle ticks, 30 kernel ticks, 0 user ticks
+=======
+<<<<<<< HEAD
+Timer: 267 ticks
+Thread: 250 idle ticks, 17 kernel ticks, 0 user ticks
+Console: 1026 characters output
+=======
 Timer: 272 ticks
 Thread: 250 idle ticks, 22 kernel ticks, 0 user ticks
+>>>>>>> b449edebe54eb811ffbac3732c656191733863ad
 Console: 1027 characters output
+>>>>>>> 6bbde9157adb13c893e61a70721d6a8f145d4112
 Keyboard: 0 keys pressed
 Powering off...
