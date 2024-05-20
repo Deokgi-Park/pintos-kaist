@@ -26,10 +26,16 @@
 #include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+<<<<<<< HEAD
 /*바다코드*/
 static void priority_donation(struct thread *t);
 static bool is_waiter(struct list_elem *e, struct lock *lock);
 /*바다코드*/
+=======
+
+static void priority_donation(struct thread *t);
+static bool is_waiter(struct list_elem *e, struct lock *lock);
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 
 static bool sema_compare_priority(const struct list_elem *higher, const struct list_elem *lower, void *aux UNUSED);
 
@@ -188,7 +194,11 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!lock_held_by_current_thread (lock));
 	/* 덕기 코드*/
 	/*PDG START*/
+<<<<<<< HEAD
 	if(!thread_mlfqs){
+=======
+	// if(thread_mlfqs){
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 		/* 락이 타 쓰레드에 걸려있는 경우 */
 		if (!lock_try_acquire(lock)){
 			/* PDG 해당 쓰레드가 대기하는 락 설정 nested donataion */
@@ -243,11 +253,19 @@ lock_acquire (struct lock *lock) {
 		// }
 		// /* 바다 코드*/
 		lock->holder->wait_on_lock = NULL;
+<<<<<<< HEAD
 	}
 	else{
 		sema_down (&lock->semaphore);
 		lock->holder = thread_current();
 	}
+=======
+	// }
+	// else{
+	// 	sema_down (&lock->semaphore);
+	// 	lock->holder = thread_current();
+	// }
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 }
 
 /* LOCK을 획득하려고 시도하고 성공하면 true를 반환하고 실패하면 false를 반환합니다.
@@ -276,7 +294,11 @@ void
 lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
+<<<<<<< HEAD
 	if(!thread_mlfqs){
+=======
+	// if(thread_mlfqs){
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 		/* 덕기 코드*/
 		//PDG 도네이션 순회하여 해당 락의 도네이션 제거
 		struct thread *cur = thread_current ();
@@ -340,10 +362,17 @@ lock_release (struct lock *lock) {
 		lock->holder = NULL;
 		//세마포어 업 대기에서 ready 리스트로 첫번쨰 대기 쓰래드 전환
 		sema_up (&lock->semaphore);
+<<<<<<< HEAD
 	}else{
 		lock->holder = NULL;
 		sema_up (&lock->semaphore);
 	}
+=======
+	// }else{
+	// 	lock->holder = NULL;
+	// 	sema_up (&lock->semaphore);
+	// }
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 }
 
 /* 현재 스레드가 LOCK을 소유하고 있으면 true를 반환하고, 그렇지 않으면 false를 반환합니다.
@@ -449,6 +478,7 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 		cond_signal (cond, lock);
 }
 
+<<<<<<< HEAD
 /* 바다코드*/
 // static void priority_donation(struct thread *t)
 // {
@@ -476,3 +506,31 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 // 	return t->wait_on_lock == lock;
 // }
 /* 바다코드*/
+=======
+
+static void priority_donation(struct thread *t)
+{
+	ASSERT(t != NULL);
+
+	/* 리스트가 비어있는 경우 - 원래의 우선순위로 복구 */
+	if (list_empty(&t->donation))
+		t->priority = t->org_priority;
+	/* 그렇지 않은 경우 - donations 중 우선순위가 가장 높은 쓰레드에게 우선순위 기부 받기 */
+	else
+	{
+		struct thread *highest = list_entry(list_front(&t->donation), struct thread, d_elem);
+		t->priority = highest->priority;
+	}
+
+	/* 현재 쓰레드가 락을 기다리고 있는 경우, 락의 소유자에게 재귀적으로 우선순위 기부 */
+	if (t->wait_on_lock)
+		priority_donation(t->wait_on_lock->holder);
+}
+
+
+static bool is_waiter(struct list_elem *e, struct lock *lock)
+{
+	struct thread *t = list_entry(e, struct thread, d_elem);
+	return t->wait_on_lock == lock;
+}
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16

@@ -14,6 +14,7 @@
 #include "include/threads/fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
+#include "fixed_point.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -38,7 +39,11 @@ static struct list ready_list;
 static struct list sleep_list;
 
 /* PDG 모든 스레드 리스트 */
+<<<<<<< HEAD
 static struct list all_list;
+=======
+//static struct list all_list;
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -77,9 +82,12 @@ static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
 
+<<<<<<< HEAD
 
 
 
+=======
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 /* PDG 우선순위 비교하여 문맥교환 */
 void priority_preemption() {
 	if (list_empty(&ready_list))
@@ -93,7 +101,11 @@ void priority_preemption() {
 int64_t global_ticks = INT64_MAX;
 
 /* PDG 글로벌 쓰레드 웨이크업 틱스  */
+<<<<<<< HEAD
 int load_avg;
+=======
+int load_avg = 0;
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -162,7 +174,11 @@ thread_init (void) {
 	/* PDG */
 	list_init (&sleep_list);
 	/* PDG MLFQ 전체리스트 초기화*/
+<<<<<<< HEAD
 	list_init (&all_list);
+=======
+	//list_init (&all_list);
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 	list_init (&destruction_req);
 
 	/* Set up a thread structure for the running thread. */
@@ -259,6 +275,12 @@ thread_create (const char *name, int priority,
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
 	
+<<<<<<< HEAD
+=======
+	/* PDG MLFQ 전체 관리를 위한 리스트 추가*/
+	//list_push_back(&all_list, t);
+
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 	/* Add to run queue. */
 	thread_unblock (t);
 	
@@ -300,6 +322,10 @@ void thread_wakeup(){
 	old_level = intr_disable ();
 
 	thread_unblock(wakeup_thread);
+<<<<<<< HEAD
+=======
+	global_ticks = list_entry(list_begin(&sleep_list), struct thread, elem)->wakeup_tick;
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 
 	if(list_empty(&sleep_list)){
 		global_ticks = INT64_MAX;
@@ -427,14 +453,24 @@ thread_yield (void) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
+<<<<<<< HEAD
 	if(!thread_mlfqs){
+=======
+	// if(thread_mlfqs){
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 		if (thread_current()->org_priority == thread_current()->priority)
 			thread_current()->priority = new_priority;
 		thread_current()->org_priority = new_priority;
 		priority_preemption();
+<<<<<<< HEAD
 	}else{
 		thread_current()->priority = new_priority;
 	}
+=======
+	// }else{
+	// 	thread_current()->priority = new_priority;
+	// }
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 	//PDG 우선순위 변경시 리스트 재정렬 end
 }
 
@@ -448,45 +484,60 @@ thread_get_priority (void) {
 void
 thread_set_nice (int new_nice) {
 	/* TODO: Your implementation goes here */
+<<<<<<< HEAD
 	enum intr_level old_level;
 	old_level = intr_disable ();
+=======
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 	if(new_nice > 20)
 		thread_current()->nice = 20;
 	if(new_nice < -20)
 		thread_current()->nice = -20;
 	else
 		thread_current()->nice = new_nice;
+<<<<<<< HEAD
 	mlfqs_priority(thread_current());
 	thread_yield();
 	intr_set_level (old_level);
+=======
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) {
 	/* TODO: Your implementation goes here */
+<<<<<<< HEAD
 	enum intr_level old_level;
 	old_level = intr_disable ();
 	int cur_nice = thread_current()->nice;
 	intr_set_level (old_level);
 	return cur_nice;
+=======
+	return thread_current()->nice;
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) {
 	/* TODO: Your implementation goes here */
+<<<<<<< HEAD
 	enum intr_level old_level;
 	old_level = intr_disable ();
 	int cur_load_avg = FIXED_TO_INT(FIXED_MULTIPLY_INT(load_avg, 100));
 	intr_set_level (old_level);
 	return cur_load_avg;
+=======
+	return load_avg*100;
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) {
 	/* TODO: Your implementation goes here */
+<<<<<<< HEAD
 	enum intr_level old_level;
 	old_level = intr_disable ();
 	int cur_recent_cpu = FIXED_TO_INT(FIXED_MULTIPLY_INT(thread_current()->recent_cpu, 100));
@@ -542,6 +593,9 @@ mlfqs_increment(void){
 	if(thread_current()==idle_thread)
 		return;
 	thread_current()->recent_cpu = FIXED_ADD_INT(thread_current()->recent_cpu,1);
+=======
+	return thread_current()->recent_cpu * 100;
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -606,12 +660,20 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->org_priority = priority;
+<<<<<<< HEAD
 	
 	list_init(&t->donation);
 	/* PDG MLFQ 친절함 초기화 */
 	t->nice = NICE_DEFAULT;
 	/* PDG MLFQ CPU 사용량 초기화 */
 	t->recent_cpu = RECENT_CPU_DEFAULT;
+=======
+	list_init(&t->donation);
+	/* PDG MLFQ 친절함 초기화 */
+	t->nice = 0;
+	/* PDG MLFQ CPU 사용량 초기화 */
+	t->recent_cpu = 0;
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 	t->magic = THREAD_MAGIC;
 
 	/* PDG MLFQ 전체 관리를 위한 리스트 추가*/

@@ -105,8 +105,11 @@ struct thread {
 	struct list donation;	 //d_elem1 d_elem2 d_elem3		 
 	/* PDG 도네이션용 엘리먼트 */
 	struct list_elem d_elem;              /* List element. */
+<<<<<<< HEAD
 	/* PDG 도네이션용 엘리먼트 */
 	struct list_elem a_elem;              /* List element. */
+=======
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 	/* PDG MLFQ 상냥함 구현 */
 	int nice;              /* List element. */
 	/* PDG MLFQ CPU 사용계수 구현 */
