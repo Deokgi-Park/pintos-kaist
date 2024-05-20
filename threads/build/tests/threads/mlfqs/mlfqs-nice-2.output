@@ -5,6 +5,9 @@ Pintos booting with:
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
 <<<<<<< HEAD
+Calibrating timer...  214,220,800 loops/s.
+=======
+<<<<<<< HEAD
 Calibrating timer...  235,520,000 loops/s.
 Boot complete.
 Executing 'mlfqs-nice-2':
@@ -17,14 +20,20 @@ Timer: 25 ticks
 Thread: 0 idle ticks, 25 kernel ticks, 0 user ticks
 =======
 Calibrating timer...  222,412,800 loops/s.
+>>>>>>> b449edebe54eb811ffbac3732c656191733863ad
 Boot complete.
 Executing 'mlfqs-nice-2':
 Kernel PANIC at ../../tests/threads/tests.c:60 in run_test(): no test named "mlfqs-nice-2"
-Call stack: 0x8004213556 0x8004216a04 0x8004206636 0x8004206783 0x8004206120.
+Call stack: 0x800421399e 0x8004216e4c 0x8004206636 0x8004206783 0x8004206120.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
+<<<<<<< HEAD
+Timer: 29 ticks
+Thread: 0 idle ticks, 29 kernel ticks, 0 user ticks
+=======
 Timer: 28 ticks
 Thread: 0 idle ticks, 28 kernel ticks, 0 user ticks
 >>>>>>> 6bbde9157adb13c893e61a70721d6a8f145d4112
+>>>>>>> b449edebe54eb811ffbac3732c656191733863ad
 Console: 

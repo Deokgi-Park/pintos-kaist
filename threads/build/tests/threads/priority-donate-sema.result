@@ -1,3 +1,6 @@
+<<<<<<< HEAD
+PASS
+=======
 FAIL
 Test output failed to match any acceptable form.
 
@@ -21,3 +24,4 @@ Differences in `diff -u' format:
 - (priority-donate-sema) Thread L finished.
   (priority-donate-sema) Main thread finished.
   (priority-donate-sema) end
+>>>>>>> b449edebe54eb811ffbac3732c656191733863ad

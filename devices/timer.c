@@ -133,9 +133,20 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
 	thread_tick ();
+
+	/* PDG MLFQ 틱마다 동작 구현 */
+	if(thread_mlfqs){
+		mlfqs_increment();
+		/* 해당 부분 100틱 4틱 우선 순위 체크 필요 */
+		if(ticks % 100 == 0){	
+			mlfqs_recalc();
+		}
+		else if(ticks % 4 == 0){
+			mlfqs_priority(thread_current());
+		}
+	}
+
 	/*PDG start*/
-	// printf("timer_interrupt global_ticks : %lld\n", get_globalticks());
-	// printf("timer_interrupt ticks : %lld\n", ticks);
 	while(get_globalticks() <= ticks){
 		thread_wakeup();
 	}

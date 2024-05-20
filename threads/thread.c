@@ -11,8 +11,11 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
+#include "include/threads/fixed_point.h"
+#include "include/threads/fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
+#include "fixed_point.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -24,12 +27,25 @@
    Do not modify this value. */
 #define THREAD_BASIC 0xd42df210
 
+/* PDG MLFQ 기본값 셋팅*/
+#define NICE_DEFAULT 0
+#define RECENT_CPU_DEFAULT 0
+#define LOAD_AVG_DEFAULT 0
+
+/* PDG MLFQ 기본값 셋팅*/
+#define NICE_DEFAULT 0
+#define RECENT_CPU_DEFAULT 0
+#define LOAD_AVG_DEFAULT 0
+
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
 
 /* PDG 수면리스트 */
 static struct list sleep_list;
+
+/* PDG 모든 스레드 리스트 */
+static struct list all_list;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -57,6 +73,8 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
+
+
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -65,16 +83,24 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+
+
+
+
+/* PDG 우선순위 비교하여 문맥교환 */
 void priority_preemption() {
-	int cur_priority = thread_get_priority();		// 현재 실행 중인 thread의 priority보다
-	if(!list_empty(&ready_list) && cur_priority <	
-	list_entry(list_front(&ready_list), struct thread, elem)->priority) {						// ready list의 맨 앞 thread의 priority가 높다면
-		thread_yield();								// 현재 실행 중인 thread를 yield하게 함
-	}
+	if (list_empty(&ready_list))
+		return;
+	struct thread *t = list_entry(list_front(&ready_list), struct thread, elem);
+	if (thread_current()->priority < t->priority)
+		thread_yield();
 }
 
 /* PDG 글로벌 쓰레드 웨이크업 틱스  */
 int64_t global_ticks = INT64_MAX;
+
+/* PDG 글로벌 쓰레드 웨이크업 틱스  */
+int load_avg;
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -104,14 +130,12 @@ bool compare_priority(const struct list_elem *curr, const struct list_elem *new,
 
 	return a->priority > b->priority;
 }
+bool compare_donation_priority(const struct list_elem *curr, const struct list_elem *new, void *aux UNUSED){
+	const struct thread *a = list_entry (curr, struct thread, d_elem);
+	const struct thread *b = list_entry (new, struct thread, d_elem);
 
-bool sema_compare_priority(const struct list_elem *curr, const struct list_elem *new, void *aux UNUSED){
-	const struct thread *a = list_entry (curr, struct thread, elem);
-	const struct thread *b = list_entry (new, struct thread, elem);
-	printf("-------------------%d \n", b->priority);
 	return a->priority > b->priority;
 }
-
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -144,6 +168,8 @@ thread_init (void) {
 	list_init (&ready_list);
 	/* PDG */
 	list_init (&sleep_list);
+	/* PDG MLFQ 전체리스트 초기화*/
+	list_init (&all_list);
 	list_init (&destruction_req);
 
 	/* Set up a thread structure for the running thread. */
@@ -159,6 +185,7 @@ void
 thread_start (void) {
 	/* Create the idle thread. */
 	struct semaphore idle_started;
+	load_avg = LOAD_AVG_DEFAULT;
 	sema_init (&idle_started, 0);
 	thread_create ("idle", PRI_MIN, idle, &idle_started);
 
@@ -228,7 +255,6 @@ thread_create (const char *name, int priority,
 	/* Initialize thread. */
 	init_thread (t, name, priority);
 	tid = t->tid = allocate_tid ();
-
 	/* Call the kernel_thread if it scheduled.
 	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
 	t->tf.rip = (uintptr_t) kernel_thread;
@@ -239,10 +265,10 @@ thread_create (const char *name, int priority,
 	t->tf.ss = SEL_KDSEG;
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
-
+	
 	/* Add to run queue. */
 	thread_unblock (t);
-
+	
 	/* Compare priority of ready list's front with currently running thread */
 	priority_preemption();
 
@@ -264,11 +290,6 @@ void thread_sleep(int64_t ticks){
 		list_insert_ordered(&sleep_list, &curr->elem, compare_wake_tick, NULL);
 		
 		sleep_head = list_entry(list_begin(&sleep_list), struct thread, elem);
-		
-		// printf("thread_sleep insert ticks : %lld\n" , sleep_head->wakeup_tick);
-		// printf("thread_sleep head : %lld\n" , sleep_head->wakeup_tick);
-		// printf("thread_sleep ticks : %lld\n" , ticks);
-		
 	}
 	global_ticks = sleep_head->wakeup_tick;
 	thread_block();
@@ -277,18 +298,22 @@ void thread_sleep(int64_t ticks){
 
 /* PDG 쓰레드를 정지 풀고시키고 ready 리스트에 추가하는 함수 생성 */
 void thread_wakeup(){
+	if(list_empty(&sleep_list))
+		return;
 
-	struct thread *wakeup_thread = list_entry(list_pop_front(&sleep_list.head), struct thread, elem);
+	struct thread *wakeup_thread = list_entry(list_pop_front(&sleep_list), struct thread, elem);
 	
 	enum intr_level old_level;
 	old_level = intr_disable ();
 
 	thread_unblock(wakeup_thread);
-	
-	//printf("thread_wakeup before : %lld\n" , global_ticks);
-	global_ticks = list_entry(list_begin(&sleep_list), struct thread, elem)->wakeup_tick;
-	//printf("thread_wakeup after : %lld\n" , global_ticks);
 
+	if(list_empty(&sleep_list)){
+		global_ticks = INT64_MAX;
+	}else{
+		global_ticks = list_entry(list_begin(&sleep_list), struct thread, elem)->wakeup_tick;
+	}
+	
 	intr_set_level (old_level);
 }
 
@@ -331,7 +356,6 @@ thread_unblock (struct thread *t) {
 	//list_push_back (&ready_list, &t->elem);
 	//PDG ADD 우선 순위 정렬
 	list_insert_ordered(&ready_list, &t-> elem, compare_priority, NULL); 
-	
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -379,6 +403,9 @@ thread_exit (void) {
 	/* Just set our status to dying and schedule another process.
 	   We will be destroyed during the call to schedule_tail(). */
 	intr_disable ();
+	
+	/*PDG MLFQ alllist 제거*/
+	list_remove(&thread_current()->a_elem);
 	do_schedule (THREAD_DYING);
 	NOT_REACHED ();
 }
@@ -407,15 +434,15 @@ thread_yield (void) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
-	thread_current ()->priority = new_priority;
-	//PDG 우선순위 변경시 리스트 재정렬 start
-	enum intr_level old_level;
-	old_level = intr_disable ();
-	list_sort(&ready_list, compare_priority, NULL);
-	priority_preemption();
-	intr_set_level (old_level);
+	if(!thread_mlfqs){
+		if (thread_current()->org_priority == thread_current()->priority)
+			thread_current()->priority = new_priority;
+		thread_current()->org_priority = new_priority;
+		priority_preemption();
+	}else{
+		thread_current()->priority = new_priority;
+	}
 	//PDG 우선순위 변경시 리스트 재정렬 end
-	
 }
 
 /* Returns the current thread's priority. */
@@ -426,29 +453,102 @@ thread_get_priority (void) {
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) {
+thread_set_nice (int new_nice) {
 	/* TODO: Your implementation goes here */
+	enum intr_level old_level;
+	old_level = intr_disable ();
+	if(new_nice > 20)
+		thread_current()->nice = 20;
+	if(new_nice < -20)
+		thread_current()->nice = -20;
+	else
+		thread_current()->nice = new_nice;
+	mlfqs_priority(thread_current());
+	thread_yield();
+	intr_set_level (old_level);
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) {
 	/* TODO: Your implementation goes here */
-	return 0;
+	enum intr_level old_level;
+	old_level = intr_disable ();
+	int cur_nice = thread_current()->nice;
+	intr_set_level (old_level);
+	return cur_nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) {
 	/* TODO: Your implementation goes here */
-	return 0;
+	enum intr_level old_level;
+	old_level = intr_disable ();
+	int cur_load_avg = FIXED_TO_INT(FIXED_MULTIPLY_INT(load_avg, 100));
+	intr_set_level (old_level);
+	return cur_load_avg;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) {
 	/* TODO: Your implementation goes here */
-	return 0;
+	enum intr_level old_level;
+	old_level = intr_disable ();
+	int cur_recent_cpu = FIXED_TO_INT(FIXED_MULTIPLY_INT(thread_current()->recent_cpu, 100));
+	intr_set_level (old_level);
+	return cur_recent_cpu;
+}
+
+/* PDG MLFQ 함수 추가 */
+void 
+mlfqs_recalc(){
+	struct list_elem *cur = list_front(&all_list);
+	struct thread * cur_thread;
+	
+	enum intr_level old_level;
+	old_level = intr_disable ();
+	mlfqs_load_avg();
+	while(list_end(&all_list) != cur){
+		cur_thread = list_entry(cur, struct thread, a_elem);
+		mlfqs_recent_cpu(cur_thread);
+		mlfqs_priority(cur_thread);
+		cur = cur->next;
+	}
+	list_sort(&all_list, compare_priority, NULL);
+	intr_set_level (old_level);
+}
+
+void
+mlfqs_priority(struct thread *t){
+	if(t==idle_thread)
+		return;
+	t->priority = PRI_MAX - FIXED_TO_INT(FIXED_DIVIDE_INT(t->recent_cpu, 4)) - (t->nice*2);
+}
+
+void
+mlfqs_recent_cpu(struct thread *t){
+	if(t==idle_thread)
+		return;
+	t->recent_cpu = FIXED_ADD_INT(FIXED_MULTIPLY(FIXED_DIVIDE(load_avg*2,(FIXED_ADD_INT(load_avg * 2,1))),t->recent_cpu), t->nice);
+}
+
+void 
+mlfqs_load_avg(void){
+	int ready_threads;
+	if(thread_current() == idle_thread)
+		ready_threads = list_size(&ready_list);
+	else
+		ready_threads = list_size(&ready_list)+1;
+	load_avg = FIXED_ADD(FIXED_MULTIPLY(load_avg, (INT_TO_FIXED(59)/60)),FIXED_MULTIPLY_INT(INT_TO_FIXED(1)/60, ready_threads));
+}
+
+void
+mlfqs_increment(void){
+	if(thread_current()==idle_thread)
+		return;
+	thread_current()->recent_cpu = FIXED_ADD_INT(thread_current()->recent_cpu,1);
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -513,7 +613,16 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->org_priority = priority;
+	
+	list_init(&t->donation);
+	/* PDG MLFQ 친절함 초기화 */
+	t->nice = NICE_DEFAULT;
+	/* PDG MLFQ CPU 사용량 초기화 */
+	t->recent_cpu = RECENT_CPU_DEFAULT;
 	t->magic = THREAD_MAGIC;
+
+	/* PDG MLFQ 전체 관리를 위한 리스트 추가*/
+	list_push_back(&all_list, &t->a_elem);
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should

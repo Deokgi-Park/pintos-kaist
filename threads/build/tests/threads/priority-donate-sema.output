@@ -5,14 +5,31 @@ Pintos booting with:
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
 <<<<<<< HEAD
+Calibrating timer...  235,520,000 loops/s.
+=======
+<<<<<<< HEAD
 Calibrating timer...  209,510,400 loops/s.
 =======
 Calibrating timer...  221,593,600 loops/s.
 >>>>>>> 6bbde9157adb13c893e61a70721d6a8f145d4112
+>>>>>>> b449edebe54eb811ffbac3732c656191733863ad
 Boot complete.
 Executing 'priority-donate-sema':
 (priority-donate-sema) begin
 (priority-donate-sema) Thread L acquired lock.
+<<<<<<< HEAD
+(priority-donate-sema) Thread L downed semaphore.
+(priority-donate-sema) Thread H acquired lock.
+(priority-donate-sema) Thread H finished.
+(priority-donate-sema) Thread M finished.
+(priority-donate-sema) Thread L finished.
+(priority-donate-sema) Main thread finished.
+(priority-donate-sema) end
+Execution of 'priority-donate-sema' complete.
+Timer: 27 ticks
+Thread: 0 idle ticks, 27 kernel ticks, 0 user ticks
+Console: 772 characters output
+=======
 <<<<<<< HEAD
 (priority-donate-sema) Thread M finished.
 (priority-donate-sema) Main thread finished.
@@ -29,5 +46,6 @@ Timer: 28 ticks
 Thread: 0 idle ticks, 28 kernel ticks, 0 user ticks
 Console: 549 characters output
 >>>>>>> 6bbde9157adb13c893e61a70721d6a8f145d4112
+>>>>>>> b449edebe54eb811ffbac3732c656191733863ad
 Keyboard: 0 keys pressed
 Powering off...

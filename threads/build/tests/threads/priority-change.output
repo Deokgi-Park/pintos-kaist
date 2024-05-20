@@ -5,10 +5,14 @@ Pintos booting with:
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
 <<<<<<< HEAD
+Calibrating timer...  255,180,800 loops/s.
+=======
+<<<<<<< HEAD
 Calibrating timer...  235,520,000 loops/s.
 =======
 Calibrating timer...  287,539,200 loops/s.
 >>>>>>> 6bbde9157adb13c893e61a70721d6a8f145d4112
+>>>>>>> b449edebe54eb811ffbac3732c656191733863ad
 Boot complete.
 Executing 'priority-change':
 (priority-change) begin
@@ -23,9 +27,14 @@ Execution of 'priority-change' complete.
 Timer: 26 ticks
 Thread: 0 idle ticks, 26 kernel ticks, 0 user ticks
 =======
+<<<<<<< HEAD
+Timer: 26 ticks
+Thread: 0 idle ticks, 26 kernel ticks, 0 user ticks
+=======
 Timer: 25 ticks
 Thread: 0 idle ticks, 25 kernel ticks, 0 user ticks
 >>>>>>> 6bbde9157adb13c893e61a70721d6a8f145d4112
+>>>>>>> b449edebe54eb811ffbac3732c656191733863ad
 Console: 689 characters output
 Keyboard: 0 keys pressed
 Powering off...

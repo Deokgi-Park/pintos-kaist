@@ -1,3 +1,6 @@
+<<<<<<< HEAD
+PASS
+=======
 FAIL
 Test output failed to match any acceptable form.
 
@@ -30,3 +33,4 @@ Differences in `diff -u' format:
   (priority-donate-multiple) Thread a should have just finished.
   (priority-donate-multiple) Main thread should have priority 31.  Actual priority: 31.
   (priority-donate-multiple) end
+>>>>>>> b449edebe54eb811ffbac3732c656191733863ad
