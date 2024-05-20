@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "palloc.h": "c",
+        "intr-stubs.h": "c",
+        "intrinsic.h": "c",
+<<<<<<< HEAD
+        "thread.h": "c",
+        "fixed_point.h": "c",
+        "thread": "c"
+=======
+        "thread.h": "c"
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
+    }
+}

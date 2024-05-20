@@ -12,8 +12,10 @@
 #include "threads/vaddr.h"
 #include "intrinsic.h"
 #include "include/threads/fixed_point.h"
+#include "include/threads/fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
+#include "fixed_point.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -24,6 +26,11 @@
 /* Random value for basic thread
    Do not modify this value. */
 #define THREAD_BASIC 0xd42df210
+
+/* PDG MLFQ 기본값 셋팅*/
+#define NICE_DEFAULT 0
+#define RECENT_CPU_DEFAULT 0
+#define LOAD_AVG_DEFAULT 0
 
 /* PDG MLFQ 기본값 셋팅*/
 #define NICE_DEFAULT 0
@@ -446,6 +453,7 @@ thread_get_priority (void) {
 
 /* Sets the current thread's nice value to NICE. */
 void
+thread_set_nice (int new_nice) {
 thread_set_nice (int new_nice) {
 	/* TODO: Your implementation goes here */
 	enum intr_level old_level;

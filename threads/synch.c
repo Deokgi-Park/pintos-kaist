@@ -66,6 +66,7 @@ sema_down (struct semaphore *sema) {
 	old_level = intr_disable ();
 	while (sema->value == 0) {
 		//PDG 대기리스트 정렬 insert로 변경
+		//PDG 대기리스트 정렬 insert로 변경
 		list_insert_ordered (&sema->waiters, &thread_current ()->elem, compare_priority, NULL);
 		//list_push_back (&sema->waiters, &thread_current ()->elem);
 		thread_block ();
@@ -110,6 +111,9 @@ sema_up (struct semaphore *sema) {
 	old_level = intr_disable ();
 
 	if (!list_empty (&sema->waiters)){
+		/*PDG 대기락 해제 적용*/
+		list_sort(&sema->waiters, compare_priority, NULL);
+		thread_unblock(list_entry(list_pop_front(&sema->waiters), struct thread, elem));
 		/*PDG 대기락 해제 적용*/
 		list_sort(&sema->waiters, compare_priority, NULL);
 		thread_unblock(list_entry(list_pop_front(&sema->waiters), struct thread, elem));
@@ -177,6 +181,10 @@ lock_init (struct lock *lock) {
    이 함수는 잠들 수 있으므로 인터럽트 처리기 내에서 호출하면 안 됩니다.
    이 함수는 인터럽트가 비활성화된 상태에서 호출될 수 있지만,
    필요하면 잠들기 때문에 인터럽트가 다시 활성화될 것입니다. */
+/* PDG 할당이란
+   락의 헤더를 확인해서 해더가 있는 경우 wait_on_lock 으로 대기리스트에 넣기
+   락의 헤더를 확인해서 해더가 없는 경우 헤더를 자신으로 설정
+*/
 /* PDG 할당이란
    락의 헤더를 확인해서 해더가 있는 경우 wait_on_lock 으로 대기리스트에 넣기
    락의 헤더를 확인해서 해더가 없는 경우 헤더를 자신으로 설정
@@ -448,6 +456,63 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 	while (!list_empty (&cond->waiters))
 		cond_signal (cond, lock);
 }
+
+<<<<<<< HEAD
+/* 바다코드*/
+// static void priority_donation(struct thread *t)
+// {
+// 	ASSERT(t != NULL);
+
+// 	/* 리스트가 비어있는 경우 - 원래의 우선순위로 복구 */
+// 	if (list_empty(&t->donation))
+// 		t->priority = t->org_priority;
+// 	/* 그렇지 않은 경우 - donations 중 우선순위가 가장 높은 쓰레드에게 우선순위 기부 받기 */
+// 	else
+// 	{
+// 		struct thread *highest = list_entry(list_front(&t->donation), struct thread, d_elem);
+// 		t->priority = highest->priority;
+// 	}
+
+// 	/* 현재 쓰레드가 락을 기다리고 있는 경우, 락의 소유자에게 재귀적으로 우선순위 기부 */
+// 	if (t->wait_on_lock)
+// 		priority_donation(t->wait_on_lock->holder);
+// }
+
+
+// static bool is_waiter(struct list_elem *e, struct lock *lock)
+// {
+// 	struct thread *t = list_entry(e, struct thread, d_elem);
+// 	return t->wait_on_lock == lock;
+// }
+/* 바다코드*/
+=======
+
+static void priority_donation(struct thread *t)
+{
+	ASSERT(t != NULL);
+
+	/* 리스트가 비어있는 경우 - 원래의 우선순위로 복구 */
+	if (list_empty(&t->donation))
+		t->priority = t->org_priority;
+	/* 그렇지 않은 경우 - donations 중 우선순위가 가장 높은 쓰레드에게 우선순위 기부 받기 */
+	else
+	{
+		struct thread *highest = list_entry(list_front(&t->donation), struct thread, d_elem);
+		t->priority = highest->priority;
+	}
+
+	/* 현재 쓰레드가 락을 기다리고 있는 경우, 락의 소유자에게 재귀적으로 우선순위 기부 */
+	if (t->wait_on_lock)
+		priority_donation(t->wait_on_lock->holder);
+}
+
+
+static bool is_waiter(struct list_elem *e, struct lock *lock)
+{
+	struct thread *t = list_entry(e, struct thread, d_elem);
+	return t->wait_on_lock == lock;
+}
+>>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
 
 /* 바다코드*/
 // static void priority_donation(struct thread *t)
