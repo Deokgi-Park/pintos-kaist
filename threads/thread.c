@@ -454,7 +454,6 @@ thread_get_priority (void) {
 /* Sets the current thread's nice value to NICE. */
 void
 thread_set_nice (int new_nice) {
-thread_set_nice (int new_nice) {
 	/* TODO: Your implementation goes here */
 	enum intr_level old_level;
 	old_level = intr_disable ();

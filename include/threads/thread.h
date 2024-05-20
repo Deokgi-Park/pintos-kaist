@@ -94,23 +94,18 @@ struct thread {
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
-	/* Shared between thread.c and synch.c. */
-	struct list_elem elem;              /* List element. */
 	
-	/* PDG 스레드를 깨울 시간 set : 1tick 10ms */
 	/* PDG 스레드를 깨울 시간 set : 1tick 10ms */
 	int64_t wakeup_tick;
 	/* PDG 원본 우선순위*/
-	/* PDG 원본 우선순위*/
 	int org_priority;
-	/* PDG 대기하고 있는 락*/
 	/* PDG 대기하고 있는 락*/
 	struct lock* wait_on_lock;			
 	/* PDG 해당 쓰레드에 걸린 multi 락 */
 	struct list donation;	 //d_elem1 d_elem2 d_elem3		 
 	/* PDG 도네이션용 엘리먼트 */
 	struct list_elem d_elem;              /* List element. */
-	/* PDG 도네이션용 엘리먼트 */
+	/* PDG 전체리스트 엘리먼트 */
 	struct list_elem a_elem;              /* List element. */
 	/* PDG MLFQ 상냥함 구현 */
 	int nice;              /* List element. */
@@ -142,7 +137,6 @@ int64_t global_ticks;
 
 int64_t get_globalticks(void);
 bool compare_priority(const struct list_elem *curr, const struct list_elem *new, void *aux UNUSED);
-bool compare_donation_priority(const struct list_elem *curr, const struct list_elem *new, void *aux UNUSED);
 bool compare_donation_priority(const struct list_elem *curr, const struct list_elem *new, void *aux UNUSED);
 
 void thread_init (void);

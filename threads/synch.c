@@ -26,10 +26,7 @@
 #include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
-/*바다코드*/
-static void priority_donation(struct thread *t);
-static bool is_waiter(struct list_elem *e, struct lock *lock);
-/*바다코드*/
+
 
 static bool sema_compare_priority(const struct list_elem *higher, const struct list_elem *lower, void *aux UNUSED);
 
@@ -111,9 +108,6 @@ sema_up (struct semaphore *sema) {
 	old_level = intr_disable ();
 
 	if (!list_empty (&sema->waiters)){
-		/*PDG 대기락 해제 적용*/
-		list_sort(&sema->waiters, compare_priority, NULL);
-		thread_unblock(list_entry(list_pop_front(&sema->waiters), struct thread, elem));
 		/*PDG 대기락 해제 적용*/
 		list_sort(&sema->waiters, compare_priority, NULL);
 		thread_unblock(list_entry(list_pop_front(&sema->waiters), struct thread, elem));
@@ -237,19 +231,6 @@ lock_acquire (struct lock *lock) {
 		/* 덕기 코드*/
 
 
-		// /* 바다 코드*/
-		// if (!lock_try_acquire(lock))
-		// {
-		// 	thread_current()->wait_on_lock = lock;
-
-		// 	list_insert_ordered(&lock->holder->donation, &thread_current()->d_elem, compare_donation_priority, NULL);
-		// // 바다 어록 : 이것이 함수 분리라는 것이다!!
-		// 	priority_donation(lock->holder);
-
-		// 	sema_down(&lock->semaphore);
-		// 	lock->holder = thread_current();
-		// }
-		// /* 바다 코드*/
 		lock->holder->wait_on_lock = NULL;
 	}
 	else{
@@ -326,23 +307,6 @@ lock_release (struct lock *lock) {
 		}
 		while(lock->holder->wait_on_lock);
 		/* 덕기 코드*/
-
-		// /* 바다 코드*/
-		// struct list *donations = &lock->holder->donation;
-		// if (!list_empty(donations))
-		// {
-		// 	struct list_elem *e = list_front(donations);
-		// 	while (e != list_end(donations))
-		// 	{
-		// 		if (is_waiter(e, lock))
-		// 			e = list_remove(e);
-		// 		else
-		// 			e = list_next(e);
-		// 	}
-		// }
-		// list_sort(donations, compare_donation_priority, NULL);
-		// priority_donation(lock->holder);
-		// /* 바다 코드*/
 
 		//홀더 제거
 		lock->holder = NULL;
@@ -456,88 +420,3 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 	while (!list_empty (&cond->waiters))
 		cond_signal (cond, lock);
 }
-
-<<<<<<< HEAD
-/* 바다코드*/
-// static void priority_donation(struct thread *t)
-// {
-// 	ASSERT(t != NULL);
-
-// 	/* 리스트가 비어있는 경우 - 원래의 우선순위로 복구 */
-// 	if (list_empty(&t->donation))
-// 		t->priority = t->org_priority;
-// 	/* 그렇지 않은 경우 - donations 중 우선순위가 가장 높은 쓰레드에게 우선순위 기부 받기 */
-// 	else
-// 	{
-// 		struct thread *highest = list_entry(list_front(&t->donation), struct thread, d_elem);
-// 		t->priority = highest->priority;
-// 	}
-
-// 	/* 현재 쓰레드가 락을 기다리고 있는 경우, 락의 소유자에게 재귀적으로 우선순위 기부 */
-// 	if (t->wait_on_lock)
-// 		priority_donation(t->wait_on_lock->holder);
-// }
-
-
-// static bool is_waiter(struct list_elem *e, struct lock *lock)
-// {
-// 	struct thread *t = list_entry(e, struct thread, d_elem);
-// 	return t->wait_on_lock == lock;
-// }
-/* 바다코드*/
-=======
-
-static void priority_donation(struct thread *t)
-{
-	ASSERT(t != NULL);
-
-	/* 리스트가 비어있는 경우 - 원래의 우선순위로 복구 */
-	if (list_empty(&t->donation))
-		t->priority = t->org_priority;
-	/* 그렇지 않은 경우 - donations 중 우선순위가 가장 높은 쓰레드에게 우선순위 기부 받기 */
-	else
-	{
-		struct thread *highest = list_entry(list_front(&t->donation), struct thread, d_elem);
-		t->priority = highest->priority;
-	}
-
-	/* 현재 쓰레드가 락을 기다리고 있는 경우, 락의 소유자에게 재귀적으로 우선순위 기부 */
-	if (t->wait_on_lock)
-		priority_donation(t->wait_on_lock->holder);
-}
-
-
-static bool is_waiter(struct list_elem *e, struct lock *lock)
-{
-	struct thread *t = list_entry(e, struct thread, d_elem);
-	return t->wait_on_lock == lock;
-}
->>>>>>> 9384d6e3d7a6df6276a46cfc689ce0e17e7ceb16
-
-/* 바다코드*/
-// static void priority_donation(struct thread *t)
-// {
-// 	ASSERT(t != NULL);
-
-// 	/* 리스트가 비어있는 경우 - 원래의 우선순위로 복구 */
-// 	if (list_empty(&t->donation))
-// 		t->priority = t->org_priority;
-// 	/* 그렇지 않은 경우 - donations 중 우선순위가 가장 높은 쓰레드에게 우선순위 기부 받기 */
-// 	else
-// 	{
-// 		struct thread *highest = list_entry(list_front(&t->donation), struct thread, d_elem);
-// 		t->priority = highest->priority;
-// 	}
-
-// 	/* 현재 쓰레드가 락을 기다리고 있는 경우, 락의 소유자에게 재귀적으로 우선순위 기부 */
-// 	if (t->wait_on_lock)
-// 		priority_donation(t->wait_on_lock->holder);
-// }
-
-
-// static bool is_waiter(struct list_elem *e, struct lock *lock)
-// {
-// 	struct thread *t = list_entry(e, struct thread, d_elem);
-// 	return t->wait_on_lock == lock;
-// }
-/* 바다코드*/
