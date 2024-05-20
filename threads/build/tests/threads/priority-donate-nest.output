@@ -4,18 +4,56 @@ Kernel command line: -q run priority-donate-nest
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
+<<<<<<< HEAD
+Calibrating timer...  209,510,400 loops/s.
+Boot complete.
+Executing 'priority-donate-nest':
+(priority-donate-nest) begin
+(priority-donate-nest) Low thread should have priority 32.  Actual priority: 32.
+(priority-donate-nest) Low thread should have priority 33.  Actual priority: 33.
+(priority-donate-nest) Medium thread should have priority 33.  Actual priority: 33.
+=======
+<<<<<<< HEAD
+Calibrating timer...  228,147,200 loops/s.
+=======
 Calibrating timer...  104,755,200 loops/s.
+>>>>>>> 6bbde9157adb13c893e61a70721d6a8f145d4112
 Boot complete.
 Executing 'priority-donate-nest':
 (priority-donate-nest) begin
 (priority-donate-nest) Low thread should have priority 32.  Actual priority: 31.
 (priority-donate-nest) Low thread should have priority 33.  Actual priority: 31.
+<<<<<<< HEAD
+(priority-donate-nest) Medium thread should have priority 33.  Actual priority: 32.
+>>>>>>> b449edebe54eb811ffbac3732c656191733863ad
+(priority-donate-nest) Medium thread got the lock.
+(priority-donate-nest) High thread got the lock.
+(priority-donate-nest) High thread finished.
+(priority-donate-nest) High thread should have just finished.
+(priority-donate-nest) Middle thread finished.
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> 6bbde9157adb13c893e61a70721d6a8f145d4112
+>>>>>>> b449edebe54eb811ffbac3732c656191733863ad
 (priority-donate-nest) Medium thread should just have finished.
 (priority-donate-nest) Low thread should have priority 31.  Actual priority: 31.
 (priority-donate-nest) end
 Execution of 'priority-donate-nest' complete.
+<<<<<<< HEAD
+Timer: 22 ticks
+Thread: 0 idle ticks, 22 kernel ticks, 0 user ticks
+Console: 1102 characters output
+=======
+<<<<<<< HEAD
+Timer: 30 ticks
+Thread: 0 idle ticks, 30 kernel ticks, 0 user ticks
+Console: 1102 characters output
+=======
 Timer: 20 ticks
 Thread: 0 idle ticks, 20 kernel ticks, 0 user ticks
 Console: 764 characters output
+>>>>>>> 6bbde9157adb13c893e61a70721d6a8f145d4112
+>>>>>>> b449edebe54eb811ffbac3732c656191733863ad
 Keyboard: 0 keys pressed
 Powering off...
