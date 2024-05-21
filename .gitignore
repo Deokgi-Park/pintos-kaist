@@ -1,3 +1,2 @@
-.vscode/settings.json
-.vscode/tasks.json
-.vscode/sftp.json
+.vscode/*
+personal_guide/*

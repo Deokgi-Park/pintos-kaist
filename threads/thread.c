@@ -12,10 +12,8 @@
 #include "threads/vaddr.h"
 #include "intrinsic.h"
 #include "include/threads/fixed_point.h"
-#include "include/threads/fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
-#include "fixed_point.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -91,6 +89,10 @@ static tid_t allocate_tid (void);
 void priority_preemption() {
 	if (list_empty(&ready_list))
 		return;
+	// 인터럽트 컨텍스트인 경우 동작하지 않음
+	if(intr_context())
+		return;
+	
 	struct thread *t = list_entry(list_front(&ready_list), struct thread, elem);
 	if (thread_current()->priority < t->priority)
 		thread_yield();
