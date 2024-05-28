@@ -27,6 +27,24 @@ static bool load (const char *file_name, struct intr_frame *if_);
 static void initd (void *f_name);
 static void __do_fork (void *);
 
+/* 유저 스택에 프로그램 이름과 인자들을 저장하는 함수 
+ * file_name : 프로그램 이름과 인자가 저장된 메모리 공간
+ * count : 인자의 개수
+ * esp : 스택 포인터를 가리키는 주소
+ */
+void argument_stack(char **argv, int argc, void **rsp);
+
+/* process(thread)의 자식 리스트에 접근하여 tid를 가진 프로세스 검색 
+ * tid가 존재하면 디스크립터 반환
+ * 없으면 NULL 반환
+ */
+struct thread *get_child_process(int tid);
+
+/* 자식 리스트에서 제거
+ * 프로세스 디스크립터 메모리 해제
+ */
+void remove_child_process(struct thread *cp);
+
 /* General process initializer for initd and other process. */
 static void
 process_init (void) {
@@ -50,8 +68,12 @@ process_create_initd (const char *file_name) {
 		return TID_ERROR;
 	strlcpy (fn_copy, file_name, PGSIZE);
 
+	char *next_ptr;
+	strtok_r(file_name, " ", &next_ptr);	// file_name을 첫 번째 공백 기준 맨 앞 token으로 설정
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
+
+
 	if (tid == TID_ERROR)
 		palloc_free_page (fn_copy);
 	return tid;
@@ -65,7 +87,6 @@ initd (void *f_name) {
 #endif
 
 	process_init ();
-
 	if (process_exec (f_name) < 0)
 		PANIC("Fail to launch initd\n");
 	NOT_REACHED ();
@@ -176,8 +197,25 @@ process_exec (void *f_name) {
 	/* We first kill the current context */
 	process_cleanup ();
 
+	/* parse file_name into program's name and arguments with " " */
+	char *argv[128];
+	char *token, *save_ptr;
+	int argc = 0;
+	for(token = strtok_r(file_name, " ", &save_ptr); token != NULL;		// file_name의 끝에 다다를 때까지
+		token = strtok_r(NULL, " ", &save_ptr)) {						// 공백을 기준으로 command line을 parsing하여
+			argv[argc++] = token;										// argv 배열에 저장
+	}
+
 	/* And then load the binary */
-	success = load (file_name, &_if);
+	success = load (file_name, &_if);				// file_name의 이름을 가진 binary file을 로드
+
+	
+
+	argument_stack(argv, argc, &_if.rsp);			// parsing한 command line을 user stack에 push
+	_if.R.rdi = argc;								// rdi 레지스터에 파싱한 개수
+	_if.R.rsi = (char*)_if.rsp + 8;					// rsi 레지스터에 argv의 주소를 저장
+
+	hex_dump(_if.rsp, _if.rsp, USER_STACK - (uint64_t)_if.rsp, true);
 
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
@@ -187,6 +225,35 @@ process_exec (void *f_name) {
 	/* Start switched process. */
 	do_iret (&_if);
 	NOT_REACHED ();
+}
+
+// process_exec 에서 파싱된 file_name과 인자들을 받아 user_stack에 push하는 함수
+void argument_stack(char **argv, int argc, void **rsp) {
+
+	for(int i = argc - 1; i >= 0; i--) {
+		for(int j = strlen(argv[i]); j >= 0; j--) {	// strlen(argv[i])에서 시작하는 이유 : \0을 포함시켜서 저장하기 위해
+			(*rsp)--;					// 스택 주소 감소(스택을 아래로 성장시키는 효과)
+			**(char **)rsp = argv[i][j];	// 스택 주소에 argv[i]의 문자를 순서대로 저장(거꾸로)
+		}
+		argv[i] = *(char **)rsp;	// 인자 배열에 인자가 stack의 어디에 저장됐는지 주소값 저장
+	}
+
+	int padding = (int)*rsp % 8;			// 8의 배수로 정렬하기 위해 padding을 설정(성능 상의 이유)
+	for(int i = 0; i < padding; i++) {
+		(*rsp)--;
+		**(uint8_t**)rsp = 0;
+	}
+
+	(*rsp) -= 8;							// 인자 문자열의 종료를 알려주는 0 push
+	**(char***)rsp = 0;
+
+	for(int i = argc - 1; i >= 0; i--) {	// 각 인자 문자열의 주소값을 (char*) 형태로 push
+		(*rsp) -= 8;
+		**(char***)rsp = argv[i];
+	}
+
+	(*rsp) -= 8;							// return 주소 (void*)0 push
+	**(void ***)rsp = 0;
 }
 
 
@@ -204,6 +271,10 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
+	for(int i = 0; i < 1000000000; i++) {
+		;
+		;
+	}
 	return -1;
 }
 
@@ -416,6 +487,7 @@ load (const char *file_name, struct intr_frame *if_) {
 
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
+	
 
 	success = true;
 

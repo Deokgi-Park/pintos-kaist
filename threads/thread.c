@@ -267,7 +267,20 @@ thread_create (const char *name, int priority,
 	t->tf.ss = SEL_KDSEG;
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
+
+	/* 부모 프로세스 저장 */
+	t->parent_if = thread_current()->tf;
 	
+	sema_init(&t->fork_sema, 0);
+	/* t의 wait semaphore 초기화 */
+	sema_init(&t->wait_sema, 0);
+	/* t의 free semaphore 초기화 */
+	sema_init(&t->free_sema, 0);
+	/* 현재 쓰레드의 자식 프로세스 리스트에 t 추가 */
+	list_push_back(&thread_current()->child, &t->ch_elem);
+	
+	list_init(&t->child);
+
 	/* Add to run queue. */
 	thread_unblock (t);
 	
@@ -625,6 +638,8 @@ init_thread (struct thread *t, const char *name, int priority) {
 
 	/* PDG MLFQ 전체 관리를 위한 리스트 추가*/
 	list_push_back(&all_list, &t->a_elem);
+
+	list_init(&t->child);
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should

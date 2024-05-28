@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+#include "synch.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -111,7 +112,33 @@ struct thread {
 	int nice;              /* List element. */
 	/* PDG MLFQ CPU 사용계수 구현 */
 	int recent_cpu;              /* List element. */
+
+	/* 프로세스(쓰레드)의 파일 디스크립터 테이블 */
+	struct file **fd_table;			// 프로세스가 파일을 열면 해당 파일의 포인터를 이 배열에 저장함
+									// file descriptor table의 시작 주소 가리키도록 초기화
+	/* fd table의 open한 곳의 index */
+	int fd_idx;
+
+	/* 부모의 interrupt frame */
+	struct intr_frame parent_if;
+	/* fork를 통해 만들어진 child의 load를 기다리는 semaphore */
+	struct semaphore fork_sema;
+
+	/* 자식 프로세스 list의 element */
+	struct list_elem ch_elem;
+	/* 자식 프로세스 list */
+	struct list child;
+
+	/* wait semaphore */
+	struct semaphore wait_sema;
+	/* free semaphore */
+	struct semaphore free_sema;
 	
+	/* 자식 프로세스의 exit 상태를 나타내는 값 */
+	int exit_status;
+
+	struct file *running;
+
 	
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
