@@ -215,7 +215,7 @@ process_exec (void *f_name) {
 	_if.R.rdi = argc;								// rdi 레지스터에 파싱한 개수
 	_if.R.rsi = (char*)_if.rsp + 8;					// rsi 레지스터에 argv의 주소를 저장
 
-	hex_dump(_if.rsp, _if.rsp, USER_STACK - (uint64_t)_if.rsp, true);
+	// hex_dump(_if.rsp, _if.rsp, USER_STACK - (uint64_t)_if.rsp, true);
 
 	/* If load failed, quit. */
 	palloc_free_page (file_name);

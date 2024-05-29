@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <debug.h>
 #include <stddef.h>
+#include "include/threads/synch.h"
 
 /* Process identifier. */
 typedef int pid_t;
@@ -21,6 +22,8 @@ typedef int off_t;
 #define EXIT_FAILURE 1          /* Unsuccessful execution. */
 
 #define FD_LIMIT 64				/* file descriptor table의 한계 index */
+
+struct lock filesys_lock;		/* file system(read, write)를 이용할 때 사용하기 위한 lock */
 
 /* Projects 2 and later. */
 void halt (void) NO_RETURN;

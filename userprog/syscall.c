@@ -40,6 +40,8 @@ syscall_init (void) {
 	 * mode stack. Therefore, we masked the FLAG_FL. */
 	write_msr(MSR_SYSCALL_MASK,
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
+
+	lock_init(&filesys_lock);
 }
 
 /* The main system call interface */
@@ -92,11 +94,9 @@ syscall_handler (struct intr_frame *f UNUSED) {
 			break;
 		default:
 			exit(-1);
+			thread_exit ();
 			break;
 	}
-
-	printf ("system call!\n");
-	thread_exit ();
 }
 
 void halt() {
@@ -160,22 +160,66 @@ int filesize(int fd) {
 
 int read(int fd, void *buffer, unsigned size) {
 	check_address(buffer);
-
-
+	off_t read_byte;
+	uint8_t *read_buffer = buffer;		// char형 변수는 1byte이므로 uint8_t 형으로 buffer를 변환하여 선언
+	if(fd == 0) {			// stdin
+		char key;	// 입력 받은 문자
+		for(read_byte = 0; read_byte < size; read_byte++) {
+			key = input_getc();			// input.c에 있는 내장 함수로, input buffer에 있는 char를 가져옴
+			*read_buffer++ = key;		// read_buffer를 증가시키며 key를 저장시킴(이때, 8씩 증가함)
+			if(key == '\0') {			// NULL 문자가 들어온 경우 입력의 끝을 입력하므로 break
+				break;
+			}
+		}
+	}
+	else if(fd == 1) {		// stdout
+		return -1;
+	}
+	else {
+		struct file* read_file = find_file_by_fd(fd);
+		check_address(read_file);
+		if(read_file == NULL) {
+			return -1;
+		}
+		lock_acquire(&filesys_lock);			// 다른 thread에서 filesys를 사용하지 못하게 lock을 걸어놓고
+		read_byte = file_read(read_file, buffer, size);	// file.c에 있는 내장 함수를 이용하여 read_file내에서 size만큼을 buffer에 복붙
+		lock_release(&filesys_lock);			// filesys를 사용할 수 있도록 lock 해제
+	}
+	return read_byte;			// 얼마나 읽어왔는지 return
 }
 
 int write(int fd, const void *buffer, unsigned size) {
-	check_address(buffer);
-
+	check_address(buffer);			// buffer의 주소가 유효한지 확인
+	if(fd == 0) {		// stdin(fd가 표준 입력에 대한 값이면 이 함수와 관련이 없으므로 return)
+		return -1;
+	}
+	else if(fd == 1) {	// stdout(fd가 표준 출력에 관한 경우 화면에 출력)
+		putbuf(buffer, size);		// 출력하는 함수
+		return size;
+	}
+	else {				// 그 외에는 fd을 가진 파일에 buffer에서 size크기 만큼의 값을 쓰는 것임
+		struct file *write_file = find_file_by_fd(fd);
+		check_address(write_file);		// write_file 주소가 유효한지 검사
+		if(write_file == NULL) {		// 검사 2
+			return -1;
+		}
+		lock_acquire(&filesys_lock);			// 다른 thread에서 filesys를 사용하지 못하게 lock을 걸어놓고
+		off_t write_result = file_write(write_file, buffer, size);	// file.c에 있는 내장 함수를 이용하여 write_file에 buffer에서 size크기만큼을 복붙
+		lock_release(&filesys_lock);			// filesys를 사용할 수 있도록 lock 해제
+		return write_result;		// 얼마나 썼는지 return
+	}
 }
 
 void seek(int fd, unsigned position) {		// 파일 디스크립터 fd를 가진 파일에서 position으로 위치를 이동하는 함수
-	struct file *seek_file = find_file_by_fd(fd);	// fd를 통해 파일을 찾음
-
-	if(seek_file <= 2) {
+	if(fd <= 2) {
 		return;
 	}
-	seek_file->pos = position;
+	struct file *seek_file = find_file_by_fd(fd);
+	check_address(seek_file);
+	if(seek_file == NULL) {
+		return;
+	}
+	file_seek(seek_file, position);
 }
 
 unsigned tell(int fd) {			// 파일 디스크립터 fd를 가진 파일의 현재 위치를 알려주는 함수
