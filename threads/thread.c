@@ -35,6 +35,9 @@
 #define RECENT_CPU_DEFAULT 0
 #define LOAD_AVG_DEFAULT 0
 
+#define FDT_PAGES 3
+#define FD_LIMIT FDT_PAGES * (1 << 9)		/* file descriptor table의 한계 index */
+
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
@@ -268,18 +271,26 @@ thread_create (const char *name, int priority,
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
 
+	t->fd_table = palloc_get_multiple(PAL_ZERO, FDT_PAGES);
+	if(t->fd_table == NULL) {
+		return TID_ERROR;
+	}
+	t->fd_idx = 2;			// 0은 stdin, 1은 stdout이 할당
+	t->fd_table[0] = 1;		// 0번째에 stdin
+	t->fd_table[1] = 2;		// 1번째에 stdout 할당
+
 	/* 부모 프로세스 저장 */
-	t->parent_if = thread_current()->tf;
+	// t->parent_if = thread_current()->tf;
 	
-	sema_init(&t->fork_sema, 0);
-	/* t의 wait semaphore 초기화 */
-	sema_init(&t->wait_sema, 0);
-	/* t의 free semaphore 초기화 */
-	sema_init(&t->free_sema, 0);
-	/* 현재 쓰레드의 자식 프로세스 리스트에 t 추가 */
-	list_push_back(&thread_current()->child, &t->ch_elem);
+	// sema_init(&t->fork_sema, 0);
+	// /* t의 wait semaphore 초기화 */
+	// sema_init(&t->wait_sema, 0);
+	// /* t의 free semaphore 초기화 */
+	// sema_init(&t->free_sema, 0);
+	// /* 현재 쓰레드의 자식 프로세스 리스트에 t 추가 */
+	// list_push_back(&thread_current()->child, &t->ch_elem);
 	
-	list_init(&t->child);
+	// list_init(&t->child);
 
 	/* Add to run queue. */
 	thread_unblock (t);
@@ -638,6 +649,10 @@ init_thread (struct thread *t, const char *name, int priority) {
 
 	/* PDG MLFQ 전체 관리를 위한 리스트 추가*/
 	list_push_back(&all_list, &t->a_elem);
+
+	t->exit_status = 0;
+
+
 
 	list_init(&t->child);
 }

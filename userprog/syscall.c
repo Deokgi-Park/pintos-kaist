@@ -57,13 +57,13 @@ syscall_handler (struct intr_frame *f UNUSED) {
 			exit(f->R.rdi);
 			break;
 		// case SYS_FORK:
-
+			// fork(f->R.rdi);
 		// 	break;
 		// case SYS_EXEC:
-			
+		// 	exec(f->R.rdi);
 		// 	break;
 		// case SYS_WAIT:
-			
+			// wait(f->R.rdi);
 		// 	break;
 		case SYS_CREATE:
 			f->R.rax = create(f->R.rdi, f->R.rsi);
@@ -117,7 +117,17 @@ pid_t fork(const char *thread_name) {
 
 int exec(const char *cmd_line) {
 	check_address(cmd_line);
-
+	int file_size = strlen(cmd_line) + 1;
+	char *fn_copy = palloc_get_page(2);
+	if(fn_copy == NULL) {
+		exit(-1);
+	}
+	strlcpy(fn_copy, cmd_line, file_size);
+	if(process_exec(fn_copy) == -1) {
+		return -1;
+	}
+	NOT_REACHED();
+	return 0;
 }
 
 int wait(pid_t pid) {
@@ -136,7 +146,7 @@ bool remove(const char *file) {
 
 int open(const char *file) {
 	check_address(file);		// file 주소가 유효한지 검사
-	struct file *opened = filesys_open(file);	// file.c에 있는 file을 open함수로 주소를 받아옴
+	struct file *opened = filesys_open(file);	// file.c에 있는 file이라는 이름을 가진 파일을 open하는 함수
 	if(opened == NULL) {
 		return -1;
 	}

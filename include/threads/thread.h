@@ -29,6 +29,9 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+#define FDT_PAGES 3			
+#define FD_LIMIT FDT_PAGES * (1 << 9)		/* file descriptor table의 한계 index */
+
 /* A kernel thread or user process.
  *
  * Each thread structure is stored in its own 4 kB page.  The
