@@ -105,7 +105,7 @@ void halt() {
 
 void exit(int status) {
 	struct thread *cur = thread_current();
-	cur->status = status;
+	cur->exit_status = status;
 	printf("%s: exit(%d)\n", cur->name, status);
 	thread_exit();
 }
