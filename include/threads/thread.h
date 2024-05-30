@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+#include "threads/synch.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -21,13 +22,14 @@ enum thread_status {
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
+typedef int pid_t;
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
 
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
-
+#define MAX_FILES 128	 				/* PDG project2 파일 최대 갯수. */
 /* A kernel thread or user process.
  *
  * Each thread structure is stored in its own 4 kB page.  The
@@ -111,7 +113,35 @@ struct thread {
 	int nice;              /* List element. */
 	/* PDG MLFQ CPU 사용계수 구현 */
 	int recent_cpu;              /* List element. */
-	
+
+	/* PDG project2 프로세스 id */
+	pid_t pid;
+	/* PDG project2 부모스레드 */
+	struct thread *parent;
+	/* PDG project2 자식용 엘리먼트 */
+	struct list_elem c_elem;
+	/* PDG project2 자식 리스트 */
+	struct list child_list;
+	/* PDG project2 생성여부 */
+	bool load_flag;
+	/* PDG project2 종료여부 */
+	bool exit_flag;
+	/* PDG project2 종료상태 */
+	int exit_status;
+	/* PDG project2 종료 세마포어 정보 */
+	struct semaphore exit_sema_info;
+	/* PDG project2 로드 세마포어 정보 */
+	struct semaphore load_sema_info;
+	/* PDG project2 wait 세마포어 정보 */
+	struct semaphore wait_sema_info;
+	/* PDG project2 if_ 정보 */
+	struct intr_frame if_;
+	/* PDG project2 FDT 제작 */
+	struct file *fdt[MAX_FILES];
+	/* PDG project2 다음 fd 번호 */
+	int next_fd;
+	/* PDG project2 실행중인 파일 */
+	struct file *running;
 	
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
