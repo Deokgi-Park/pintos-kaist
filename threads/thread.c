@@ -179,6 +179,9 @@ thread_init (void) {
 	init_thread (initial_thread, "main", PRI_DEFAULT);
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid ();
+	
+	// /* PDG MLFQ 전체 관리를 위한 리스트 추가*/
+	list_push_back(&all_list, &initial_thread->a_elem);
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -242,8 +245,7 @@ thread_print_stats (void) {
    PRIORITY, but no actual priority scheduling is implemented.
    Priority scheduling is the goal of Problem 1-3. */
 tid_t
-thread_create (const char *name, int priority,
-		thread_func *function, void *aux) {
+thread_create (const char *name, int priority, thread_func *function, void *aux) {
 	struct thread *t;
 	tid_t tid;
 
@@ -257,6 +259,7 @@ thread_create (const char *name, int priority,
 	/* Initialize thread. */
 	init_thread (t, name, priority);
 	tid = t->tid = allocate_tid ();
+	t->pid = tid;
 	/* Call the kernel_thread if it scheduled.
 	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
 	t->tf.rip = (uintptr_t) kernel_thread;
@@ -267,7 +270,25 @@ thread_create (const char *name, int priority,
 	t->tf.ss = SEL_KDSEG;
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
-	
+
+	/* PDG MLFQ 전체 관리를 위한 리스트 추가 */
+	list_push_back(&all_list, &t->a_elem);
+
+	/* PDG project2 스레드 추가 기본 설정 */
+	/* PDG project2 부모스레드 */
+	t->parent = thread_current();
+	/* PDG project2 로드, 종료 플래그 없음 */
+	t->exit_flag = false;
+	t->exit_status = 0;
+	t->load_flag = false;
+	/* PDG project2 로드, 종료 세마포어 초기화 */
+	sema_init(&t->exit_sema_info, 0);
+	sema_init(&t->load_sema_info, 0);
+	sema_init(&t->wait_sema_info, 0);
+	/* PDG project2 부모의 자식 리스트에 추가 */
+	list_push_back(&t->parent->child_list, &t->c_elem);
+
+
 	/* Add to run queue. */
 	thread_unblock (t);
 	
@@ -621,10 +642,13 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->nice = NICE_DEFAULT;
 	/* PDG MLFQ CPU 사용량 초기화 */
 	t->recent_cpu = RECENT_CPU_DEFAULT;
-	t->magic = THREAD_MAGIC;
 
-	/* PDG MLFQ 전체 관리를 위한 리스트 추가*/
-	list_push_back(&all_list, &t->a_elem);
+	/* PDG project2 자식 리스트 초기화 */
+	list_init(&t->child_list);
+	/* PDG project2 자식 리스트 초기화 */
+	t->next_fd = 2;
+	
+	t->magic = THREAD_MAGIC;	
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
